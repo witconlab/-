@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>전남광주 통합특별시 시민주권 정책공론장</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans KR',sans-serif;background:#232E6E;min-height:100vh;}
+input,textarea,button,select{font-family:'Noto Sans KR',sans-serif;}
+textarea{resize:none;}
+button{cursor:pointer;}
+a{text-decoration:none;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Firebase -->
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getFirestore,doc,getDoc,setDoc,collection,getDocs,addDoc,onSnapshot,query,orderBy,limit,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import{getStorage,ref,uploadString,getDownloadURL}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+/* ── Firebase 초기화 (Analytics 제외 — 로그인 팝업 방지) ── */
+const firebaseConfig={
+  apiKey:"AIzaSyCyOC2Bb7zXeZ2QgDgRLLgIuP3tpxIecu0",
+  authDomain:"forum-ab254.firebaseapp.com",
+  projectId:"forum-ab254",
+  storageBucket:"forum-ab254.firebasestorage.app",
+  messagingSenderId:"862981775555",
+  appId:"1:862981775555:web:1cd168b2c725b32e564276"
+};
+const fbApp=initializeApp(firebaseConfig);
+const db=getFirestore(fbApp);
+const storage=getStorage(fbApp);
+
+/* ── 12개 테이블 소개글 초기 데이터 ── */
+const TABLE_INTROS={
+  "d1":"순환보직 공무원이 담당하는 읍·면·동장은 지역 현실에 대한 이해 부족, 중장기 계획 부재, 주민과의 거리감 등 문제를 노출하고 있습니다.\n읍·면·동 단위 (준)지방정부 전환을 위해 주민 추천제 읍·면·동장 선출이 필요하며, 중장기적으로 행정과 주민자치 모두에 우수한 민간 자원을 활용하는 개방직(전문직위제) 읍·면·동장으로 발전이 필요합니다.\n단순 민원 처리 중심의 소극적 행정에서 벗어나 주민자치회와 협력하여 지역 주민자치 활성화에 기여하는 읍·면·동장 선출이 이 정책의 핵심입니다.",
+  "d2":"마을자치가 지속가능하게 운영되려면 안정적인 재정지원 체계가 필요합니다.\n주민세 환원, 시민참여예산, 고향사랑기부제, 자치계획 실행예산 등을 연계한 재정구조 논의가 필요하며, 주민자치회 운영비와 사업비의 구분 지원, 기본소득, 공공업무 위수탁 방안도 포함됩니다.\n단순 공모사업 중심 지원을 넘어 마을기업 활성화, 공동생산·공동판매 기반 지역순환경제 모델 등 주민주도의 자립형 재정 운영 방안을 함께 논의합니다.",
+  "d3":"전남·광주 행정통합에 따라 도시형 마을자치와 농촌형 공동체 구조를 함께 포괄하는 통합형 마을자치 체계 마련이 시급합니다.\n도시형·농촌형·도농복합지역의 마을자치 모델을 비교·분석하고, 행정·현장·중간지원조직 간 연계 협력방안이 필요합니다.\n공모사업의 과도한 경쟁 구조 개선, 전남·광주 간 균형 있는 예산 배분, 전문지원관 도입 등을 통해 현장 중심의 실질적 정책 지원체계를 만들어갑니다.",
+  "d4":"주민자치회 입법화 흐름에 맞춰 광주·전남 통합 이후 적용 가능한 조례와 운영 기준을 사전에 논의합니다.\n읍·면·동 단위 주민자치회가 자생조직이 아닌 주민 의견을 모으고 실행하는 실질적 대표성을 가진 자치기구로 기능할 수 있도록 조례 기반을 마련합니다.\n마을공동체 활성화 기본법 통과에 대비해 통합시에서 빠르게 대응할 수 있는 조례 체계를 함께 설계합니다.",
+  "d5":"공공 유휴공간뿐 아니라 운영 중인 마을회관, SOC 및 도시재생 사업 공간 등을 주민 삶과 연결된 창의적 공유지대·공동체 거점공간으로 활용하는 방안을 논의합니다.\n주민들이 자유롭게 소통·협력할 수 있는 지속가능한 공간 기반을 마련하고, 문화·경제·돌봄 기능이 결합된 생활밀착형 공동체 공간으로 활용합니다.\n다양한 실험과 도전이 가능한 '마을실험실' 연계 방향도 함께 모색합니다.",
+  "d6":"행정통합에 따라 기존 마을공동체, 주민자치, 도시재생 등 중간지원조직의 기능과 역할을 재정비할 필요가 있습니다.\n통합형 기관의 가치와 운영목표, 전략에 따른 조직 구성(인력)을 논의하고, 전남·광주가 함께 활용할 수 있는 지원기관 체계를 설계합니다.",
+  "d7":"주민자치회 입법화 흐름에 맞춰 읍·면·동 단위 주민자치회가 자생조직이 아닌 주민 의견을 실행하는 실질적 자치기구로 기능 강화가 필요합니다.\n전남·광주 주민자치 관련 조례 검토, 주민자치회 설치·구성·기능, 주민총회로 도출된 자치계획 실행 근거 마련, 행정정책과 예산 및 사무지원 기준을 함께 논의합니다.\n성장 단계별로 차별화된 지원체계를 통해 주민자치회가 실질적 역량을 갖출 수 있도록 제도적 기반을 마련합니다.",
+  "d8":"주민자치회는 지역마다 운영 수준과 대표성 차이가 크고, 일부는 특정 참여층 중심으로 운영되는 한계가 있습니다.\n통합 이후 전남·광주(도시·농촌·원도심·신도시) 간 이해관계가 다양해지므로, 주민자치회의 대표성과 민주성을 강화하는 실질적 주민 의사결정 구조 설계가 필요합니다.\n도시형·농촌형·도농복합형·원도심형 등 유형별 시범사업을 통해 다양한 지역 맥락에 맞는 자치모델을 실험합니다.",
+  "d9":"전남·광주 통합시 마을공동체와 주민자치의 확산과 올바른 방향을 모색하는 만남·성장·공유의 장이 필요합니다.\n시민주권정부의 통합시가 전국의 주민자치를 연결하는 학습의 장인 '전국주민자치박람회'를 유치하고, 전남·광주 통합 마을자치 한마당 및 마을자치 정책 상상마당을 개최합니다.",
+  "d10":"마을자치 정책은 주민 주도성이 핵심이지만, 이를 이해하고 지원할 공무원의 인식개선과 전문지원관제 도입이 필요합니다.\n주민자치·마을공동체 담당 공무원 대상 시민주권정부 사관학교를 신설하고, 읍·면·동 공무원 마을자치 실무교육 의무화 및 전문지원관제 시범운영을 추진합니다.\n주민리더, 마을활동가, 간사, 공무원 등이 함께 성장하는 네트워크 구축이 이 정책의 목표입니다.",
+  "d11":"도시와 농촌이 연계·상생하는 생활권 기반 공동체 모델 구축과 인구감소·지역소멸 대응을 위한 협력체계 마련이 필요합니다.\n마을교육공동체 활성화(학교·마을·주민자치회 연계), 생활밀착형 돌봄 체계 구축, 도농교류 확대와 지역순환경제 활성화를 위한 정책 방향을 모색합니다.\n교육청·지자체·중간지원조직 협력체계를 구축하여 광역 생활공동체 모델을 발굴합니다.",
+  "d12":"마을활동은 지역사회 유지와 공동체 회복에 중요한 공공적 가치를 가지지만, 여전히 자원봉사나 희생 중심으로 인식되는 한계가 있습니다.\n마을활동의 사회적 가치를 정의하고, 활동시간·경험·성과에 대한 인정체계(활동수당, 실비, 교육비 지원), 마을활동 경력인증제, 우수 활동가 포상 및 성장지원 방안을 논의합니다.\n활동가 소진 예방 프로그램 운영 등 지속가능한 마을활동 생태계를 함께 설계합니다."
+};
+
+/* 소개글 초기 데이터 Firestore에 자동 입력 (없을 때만) */
+async function seedTableIntros(){
+  for(const[id,intro]of Object.entries(TABLE_INTROS)){
+    try{
+      const existing=await getDoc(doc(db,"tables",id));
+      if(!existing.exists()||!existing.data()?.intro){
+        await setDoc(doc(db,"tables",id),{intro},{merge:true});
+      }
+    }catch{}
+  }
+}
+
+/* ── Firestore 헬퍼 ── */
+window.fbGet=async(col,id)=>{
+  try{const s=await getDoc(doc(db,col,id));return s.exists()?s.data():null;}catch{return null;}
+};
+window.fbSet=async(col,id,data)=>{
+  await setDoc(doc(db,col,id),{...data,_at:serverTimestamp()},{merge:true});
+};
+window.fbAdd=async(col,data)=>{
+  await addDoc(collection(db,col),{...data,_at:serverTimestamp()});
+};
+window.fbListen=(col,cb)=>{
+  const q=query(collection(db,col),orderBy("_at","desc"),limit(500));
+  return onSnapshot(q,snap=>{cb(snap.docs.map(d=>({id:d.id,...d.data()})));});
+};
+window.fbListenDoc=(col,id,cb)=>{
+  return onSnapshot(doc(db,col,id),snap=>{cb(snap.exists()?snap.data():null);});
+};
+
+/* ── Firebase Storage 업로드 ── */
+window.fbUploadPhoto=async(base64full, path)=>{
+  const storageRef=ref(storage, path);
+  // base64full = "data:image/jpeg;base64,..."
+  const base64=base64full.split(",")[1];
+  await uploadString(storageRef, base64, "base64", {contentType:"image/jpeg"});
+  const url=await getDownloadURL(storageRef);
+  return url;
+};
+
+/* ── 소개글 초기 데이터 자동 입력 후 앱 실행 ── */
+seedTableIntros().catch(()=>{}).finally(()=>{
+  window._fbReady=true;
+  if(window._appStart)window._appStart();
+});
+</script>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useRef,useMemo,useCallback}=React;
+
+const C={navy:"#232E6E",navyDeep:"#1A2254",mint:"#4FC0AD",mintSoft:"#DFF3EF",white:"#FFFFFF",ink:"#1B2440",line:"#D9DDEA",gray:"#6A7185",grayOnNavy:"#ABB4D6",paper:"#F6F7FB"};
+const DEFAULT_TITLE="전남광주 통합특별시\n시민주권 정책공론장";
+const DEFAULT_SESSION="주제별 100분 토론";
+const DEFAULT_CODE="2026";
+const DEFAULT_VOTE="https://maeuli.com/townE/home/programs/communication/view2?itemKey=5111&menu=246";
+const DEFAULT_DOC_FOLDER="https://drive.google.com/drive/folders/1PSVibnoIDyXBn499KNvpaRYj4T3pURjB?usp=sharing";
+const DEFAULT_GAS_URL="https://script.google.com/macros/s/AKfycbw56wJTjInXRBjXaVcsXh1SY1oSArcz4A1Po7dZC2raMUCRNWRU1vcjp48hOQkEzC8K/exec";
+const DEFAULT_TABLES=[
+  "1. 읍면동장 주민 선출제 및 전문직위제|https://notebooklm.google.com/notebook/757784b1-ca60-4b1c-a939-50e037105002",
+  "2. 마을공동체·주민자치 재정 자립 마련|https://notebooklm.google.com/notebook/ecc42848-cb6d-4aa3-b7b5-4d3bff5fe935",
+  "3. 통합형 마을자치 종합체계 마련|https://notebooklm.google.com/notebook/10bd607d-b6e8-402c-b5d3-3e1d489da573",
+  "4. 시민이 제안하는 통합조례 마련|https://notebooklm.google.com/notebook/afaa674b-4860-4ede-938f-d496f0871918",
+  "5. 자치를 연결하는 공공 공간 활용|https://notebooklm.google.com/notebook/97e5f7b1-d303-4817-b9b1-88a8f5dd2151",
+  "6. 전남·광주 통합지원기관 역할과 기능|https://notebooklm.google.com/notebook/11db5715-c275-4cf4-9e55-0294161d1d42",
+  "7. 주민자치회 성장 단계별 지원체계 마련|https://notebooklm.google.com/notebook/fcdf5341-5cfd-4f2a-a97b-34136bea01f9",
+  "8. 주민자치회 대표성 강화 시범사업 실시|https://notebooklm.google.com/notebook/13b47372-4aee-4e27-a29b-2b81c43ccf1d",
+  "9. 전국 주민자치 박람회 유치|https://notebooklm.google.com/notebook/249587fc-87c3-4027-8182-47137d0dcce4",
+  "10. 시민주권 사관학교 및 네트워크 구축|https://notebooklm.google.com/notebook/f570c074-fb52-4682-a8c6-9560dcf65bac",
+  "11. 도시·농촌 상생형 생활권 모델 구축|https://notebooklm.google.com/notebook/3a304714-5432-4e3e-96f4-58d162bf1e87",
+  "12. 마을활동의 가치 재정립과 인정과 보상|https://notebooklm.google.com/notebook/64291f40-e9da-45aa-aa7f-f698ce1c8d60",
+];
+const EMPTY_DECK={title:"",s1:"",s2:"",s3:"",s4:"",s5:"",tiroSummary:"",tiroLink:"",intro:"",photoAt:0};
+const newId=()=>`${Date.now()}-${Math.random().toString(36).slice(2,7)}`;
+const lns=(t)=>(t||"").split("\n").map(l=>l.trim()).filter(Boolean);
+const fmt=n=>String(n).padStart(2,"0");
+const inp={border:`1.5px solid ${C.line}`,outline:"none"};
+
+/* ── Firebase 래퍼 (window에서 호출) ── */
+const fget=(col,id)=>window.fbGet(col,id);
+const fset=(col,id,data)=>window.fbSet(col,id,data);
+const fadd=(col,data)=>window.fbAdd(col,data);
+const flisten=(col,cb)=>window.fbListen(col,cb);
+const flistenDoc=(col,id,cb)=>window.fbListenDoc(col,id,cb);
+
+/* ── 이미지 압축 ── */
+function compressImage(file,maxW=1200,quality=0.75){
+  return new Promise((res,rej)=>{
+    const rd=new FileReader();
+    rd.onload=e=>{const img=new Image();img.onload=()=>{const sc=Math.min(1,maxW/img.width);const cv=document.createElement("canvas");cv.width=Math.round(img.width*sc);cv.height=Math.round(img.height*sc);cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);res(cv.toDataURL("image/jpeg",quality));};img.onerror=rej;img.src=e.target.result;};rd.onerror=rej;rd.readAsDataURL(file);
+  });
+}
+
+/* ── Firebase Storage 직접 업로드 (GAS 불필요) ── */
+async function uploadPhotoToDrive({base64full,tableId,tableName,gasUrl}){
+  const fileName=`${tableId}_${Date.now()}.jpg`;
+  const path=`photos/${tableId}/${fileName}`;
+  const url=await window.fbUploadPhoto(base64full, path);
+  return {
+    ok: true,
+    thumbnailUrl: url,
+    directUrl: url,
+    fileId: fileName,
+    isDrive: false,
+  };
+}
+
+const B=(s)=>({...s,cursor:"pointer",fontFamily:"inherit"});
+
+/* ━━━━━━━━━━━━━━━━ 팝업 모달 (모바일 최적화) ━━━━━━━━━━━━━━━━ */
+function IframeModal({url,title,onClose}){
+  useEffect(()=>{
+    const prev=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    return()=>{document.body.style.overflow=prev;};
+  },[]);
+  return(
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,zIndex:9998,display:"flex",flexDirection:"column",background:"rgba(10,16,50,0.95)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0.75rem 1rem",background:C.navyDeep,flexShrink:0,minHeight:"52px"}}>
+        <span style={{fontSize:"0.875rem",fontWeight:700,color:"#fff",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{title}</span>
+        <div style={{display:"flex",gap:"0.5rem",flexShrink:0,marginLeft:"0.75rem"}}>
+          <a href={url} target="_blank" rel="noreferrer" style={{fontSize:"0.75rem",fontWeight:700,color:C.mint,textDecoration:"none",padding:"0.375rem 0.75rem",borderRadius:"0.375rem",border:`1px solid ${C.mint}`,whiteSpace:"nowrap"}}>새 탭 ↗</a>
+          <button onClick={onClose} style={B({fontSize:"1.25rem",color:"#fff",background:"rgba(255,255,255,.2)",border:"none",lineHeight:1,padding:"0.375rem 0.6rem",borderRadius:"0.375rem"})}>✕</button>
+        </div>
+      </div>
+      <iframe src={url} title={title} style={{flex:1,border:"none",width:"100%",background:"#fff",display:"block"}} allow="camera; microphone; clipboard-write" allowFullScreen/>
+    </div>
+  );
+}
+
+/* ━━━━━━━━━━━━━━━━ 공용 UI ━━━━━━━━━━━━━━━━ */
+function BigBtn({children,onClick,onClickUrl,href,kind="white"}){
+  const s={white:{background:C.white,color:C.navy,border:"2px solid rgba(255,255,255,.3)"},mint:{background:C.mint,color:"#fff",border:"none"},outline:{background:"transparent",color:"#fff",border:"2px solid rgba(255,255,255,.5)"}};
+  const base={display:"block",width:"100%",textAlign:"center",borderRadius:"1rem",padding:"1.25rem 1rem",fontSize:"1.25rem",fontWeight:700,textDecoration:"none",boxSizing:"border-box"};
+  if(onClickUrl)return <button onClick={onClickUrl} style={B({...base,...s[kind]})}>{children}</button>;
+  if(href)return <a href={href} target="_blank" rel="noreferrer" style={{...base,...s[kind]}}>{children}</a>;
+  return <button onClick={onClick} style={B({...base,...s[kind]})}>{children}</button>;
+}
+function Btn({children,onClick,kind="primary",disabled,small}){
+  const s={primary:{background:C.mint,color:"#fff",border:"none"},ghost:{background:"#fff",color:C.navy,border:`1.5px solid ${C.navy}`},dark:{background:C.navy,color:"#fff",border:"none"}};
+  return <button onClick={onClick} disabled={disabled} style={B({...s[kind],borderRadius:"0.5rem",fontWeight:700,padding:small?"0.375rem 0.75rem":"0.75rem 1.25rem",fontSize:small?"0.875rem":"1rem",opacity:disabled?0.4:1,cursor:disabled?"not-allowed":"pointer"})}>{children}</button>;
+}
+const Badge=({c})=><span style={{display:"inline-block",borderRadius:"9999px",padding:"0.5rem 1.25rem",fontSize:"1rem",fontWeight:700,background:"rgba(79,192,173,.18)",color:C.mint}}>{c}</span>;
+function NavyPage({children}){return <div style={{minHeight:"100vh",background:C.navy}}><div style={{maxWidth:"28rem",margin:"0 auto",padding:"2.5rem 1.25rem 3rem"}}>{children}</div></div>;}
+function BackBar({onBack,label="← 이전으로"}){return <button onClick={onBack} style={B({fontSize:"1.125rem",fontWeight:700,color:C.grayOnNavy,background:"none",border:"none",marginBottom:"1.25rem",padding:"0.5rem 0",display:"block"})}>{label}</button>;}
+
+/* ━━━━━━━━━━━━━━━━ 타이머 ━━━━━━━━━━━━━━━━ */
+function Timer({onClose}){
+  const [mode,setMode]=useState("stopwatch");const [running,setRunning]=useState(false);const [elapsed,setElapsed]=useState(0);const [target,setTarget]=useState(100);const iRef=useRef(null);
+  useEffect(()=>{if(running){iRef.current=setInterval(()=>{setElapsed(e=>{const next=e+1;if(mode==="countdown"&&next>=target*60){clearInterval(iRef.current);setRunning(false);return target*60;}return next;});},1000);}else clearInterval(iRef.current);return()=>clearInterval(iRef.current);},[running,mode,target]);
+  const disp=mode==="stopwatch"?elapsed:Math.max(0,target*60-elapsed);
+  const h=Math.floor(disp/3600),m=Math.floor((disp%3600)/60),s=disp%60;
+  const isDone=mode==="countdown"&&elapsed>=target*60;
+  const prog=mode==="countdown"?Math.min(1,elapsed/(target*60)):0;
+  const R=110;const circ=2*Math.PI*R;
+  const resetAll=()=>{setRunning(false);setElapsed(0);};
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:9999,background:C.navyDeep,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+      <button onClick={onClose} style={B({position:"absolute",top:"1.25rem",right:"1.25rem",fontSize:"1.75rem",color:C.grayOnNavy,background:"none",border:"none"})}>✕</button>
+      <div style={{display:"flex",gap:"0.5rem",marginBottom:"1.5rem"}}>
+        {[["stopwatch","⏱ 경과"],["countdown","⏳ 카운트다운"]].map(([md,label])=>(
+          <button key={md} onClick={()=>{resetAll();setMode(md);}} style={B({padding:"0.5rem 1.25rem",borderRadius:"9999px",fontSize:"0.875rem",fontWeight:700,background:mode===md?C.mint:"rgba(255,255,255,.08)",color:mode===md?"#fff":C.grayOnNavy,border:"none"})}>{label}</button>
+        ))}
+      </div>
+      {mode==="countdown"&&!running&&elapsed===0&&(
+        <div style={{display:"flex",alignItems:"center",gap:"0.75rem",marginBottom:"1.25rem"}}>
+          <button onClick={()=>setTarget(t=>Math.max(1,t-5))} style={B({width:"2.5rem",height:"2.5rem",borderRadius:"50%",fontSize:"1.25rem",fontWeight:900,background:"rgba(255,255,255,.1)",color:"#fff",border:"none"})}>-</button>
+          <div style={{textAlign:"center"}}><input type="number" value={target} onChange={e=>setTarget(Math.max(1,parseInt(e.target.value)||1))} style={{width:"5rem",textAlign:"center",borderRadius:"0.5rem",padding:"0.5rem",fontSize:"1.5rem",fontWeight:900,background:"rgba(255,255,255,.1)",color:"#fff",border:"1px solid rgba(255,255,255,.2)",fontFamily:"inherit"}}/><div style={{fontSize:"0.75rem",marginTop:"0.25rem",color:C.grayOnNavy}}>분</div></div>
+          <button onClick={()=>setTarget(t=>t+5)} style={B({width:"2.5rem",height:"2.5rem",borderRadius:"50%",fontSize:"1.25rem",fontWeight:900,background:"rgba(255,255,255,.1)",color:"#fff",border:"none"})}>+</button>
+        </div>
+      )}
+      <div style={{position:"relative",display:"flex",alignItems:"center",justifyContent:"center",width:"280px",height:"280px",marginBottom:"0.5rem"}}>
+        {mode==="countdown"&&(<svg width="280" height="280" style={{position:"absolute",top:0,left:0}}><circle cx="140" cy="140" r={R} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth="8"/><circle cx="140" cy="140" r={R} fill="none" stroke={isDone?"#FF9F6A":C.mint} strokeWidth="8" strokeDasharray={circ} strokeDashoffset={circ*(1-prog)} strokeLinecap="round" style={{transform:"rotate(-90deg)",transformOrigin:"140px 140px",transition:"stroke-dashoffset 0.9s linear"}}/></svg>)}
+        <div style={{fontSize:"clamp(48px,13vw,112px)",fontWeight:900,color:isDone?"#FF9F6A":"#fff",letterSpacing:"-0.03em",lineHeight:1,textAlign:"center"}}>{h>0?`${fmt(h)}:`:""}{fmt(m)}:{fmt(s)}</div>
+      </div>
+      {isDone&&<div style={{fontSize:"1.5rem",fontWeight:900,color:"#FF9F6A",marginBottom:"0.75rem"}}>⏰ {target}분 종료!</div>}
+      <div style={{display:"flex",gap:"1.25rem",marginTop:"1rem"}}>
+        <button onClick={()=>setRunning(r=>!r)} style={B({width:"5rem",height:"5rem",borderRadius:"50%",fontSize:"1.75rem",background:running?"rgba(255,255,255,.15)":C.mint,color:"#fff",border:"none",display:"flex",alignItems:"center",justifyContent:"center"})}>{running?"⏸":"▶"}</button>
+        <button onClick={resetAll} style={B({width:"5rem",height:"5rem",borderRadius:"50%",fontSize:"1.75rem",background:"rgba(255,255,255,.08)",color:"#fff",border:"none",display:"flex",alignItems:"center",justifyContent:"center"})}>↺</button>
+      </div>
+      <div style={{fontSize:"0.875rem",marginTop:"1rem",color:C.grayOnNavy}}>{running?"진행 중":"일시 정지"} · {mode==="stopwatch"?"경과 시간":"남은 시간"}</div>
+    </div>
+  );
+}
+
+/* ━━━━━━━━━━━━━━━━ 참가자 화면 ━━━━━━━━━━━━━━━━ */
+function Landing({config,go,onStaff}){
+  return <NavyPage>
+    <div style={{textAlign:"center",marginBottom:"2.5rem",marginTop:"1rem"}}>
+      <Badge c={config?.session||DEFAULT_SESSION}/>
+      <h1 style={{fontWeight:900,color:"#fff",marginTop:"1.5rem",lineHeight:1.2,fontSize:"2rem"}}>
+        {(config?.title||DEFAULT_TITLE).split("\n").map((l,i)=><span key={i}>{i===1?<span style={{color:C.mint}}>{l}</span>:l}<br/></span>)}
+      </h1>
+      <p style={{fontSize:"1.125rem",marginTop:"1.25rem",lineHeight:1.6,color:C.grayOnNavy}}>버튼을 눌러 참여해 주세요.<br/>여러분의 의견이 정책이 됩니다.</p>
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+      <BigBtn kind="mint" onClick={()=>go("learn")}>📚 우리 테이블 정책 알아보기</BigBtn>
+      <BigBtn onClick={()=>go("opinion")}>📝 정책 의견 제출하기</BigBtn>
+      <BigBtn onClick={()=>go("vote")}>🗳️ 우선순위 투표하기</BigBtn>
+    </div>
+    <button onClick={onStaff} style={B({display:"block",width:"100%",textAlign:"center",marginTop:"3rem",fontSize:"1rem",textDecoration:"underline",color:C.grayOnNavy,background:"none",border:"none"})}>운영진 입장 →</button>
+  </NavyPage>;
+}
+
+function TablePick({config,title,sub,onPick,onBack}){
+  return <NavyPage>
+    <BackBar onBack={onBack}/>
+    <h2 style={{fontSize:"1.5rem",fontWeight:900,color:"#fff",marginBottom:"0.25rem"}}>{title}</h2>
+    {sub&&<p style={{fontSize:"1rem",marginBottom:"1.25rem",color:C.grayOnNavy}}>{sub}</p>}
+    <div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+      {config.tables.map(t=><button key={t.id} onClick={()=>onPick(t)} style={B({textAlign:"left",borderRadius:"1rem",padding:"1rem 1.25rem",fontSize:"1.125rem",fontWeight:700,background:C.white,color:C.navy,border:"none"})}>{t.name}</button>)}
+    </div>
+  </NavyPage>;
+}
+
+function Learn({config,table,onBack}){
+  const [intro,setIntro]=useState(null);
+  const [modal,setModal]=useState(null);
+  const [showPdf,setShowPdf]=useState(false);
+  useEffect(()=>{
+    fget("tables",table.id).then(d=>setIntro(d?.intro||"")).catch(()=>setIntro(""));
+  },[table.id]);
+  const pdfId=table.pdfId||"";
+  return <NavyPage>
+    {modal&&<IframeModal url={modal.url} title={modal.title} onClose={()=>setModal(null)}/>}
+    <BackBar onBack={onBack}/>
+    <Badge c="정책 알아보기"/>
+    <h2 style={{fontSize:"1.5rem",fontWeight:900,color:"#fff",marginTop:"1rem",marginBottom:"1.25rem",lineHeight:1.3}}>{table.name}</h2>
+    <div style={{borderRadius:"1rem",padding:"1.25rem",marginBottom:"1.25rem",background:C.white}}>
+      <div style={{fontSize:"1rem",fontWeight:900,marginBottom:"0.5rem",color:C.mint}}>이 정책이 나온 배경과 필요성</div>
+      {intro===null?<p style={{color:C.gray,fontSize:"1.125rem"}}>불러오는 중…</p>
+        :intro?lns(intro).map((l,i)=><p key={i} style={{fontSize:"1.125rem",lineHeight:1.6,marginBottom:"0.5rem",color:C.ink}}>{l}</p>)
+        :<p style={{fontSize:"1.125rem",lineHeight:1.6,color:C.gray}}>소개 글이 준비 중입니다.</p>}
+    </div>
+    {pdfId&&<div style={{marginBottom:"1rem"}}>
+      <a href={`https://drive.google.com/file/d/${pdfId}/view`} target="_blank" rel="noreferrer"
+        style={{display:"block",textAlign:"center",borderRadius:"1rem",padding:"1.25rem 1rem",fontSize:"1.25rem",fontWeight:700,background:C.white,color:C.navy,textDecoration:"none",boxSizing:"border-box"}}>
+        📄 정책제안서 초안 보기 ↗
+      </a>
+    </div>}
+    {!pdfId&&<div style={{marginBottom:"1rem"}}>
+      <a href={DEFAULT_DOC_FOLDER} target="_blank" rel="noreferrer"
+        style={{display:"block",textAlign:"center",borderRadius:"1rem",padding:"1.25rem 1rem",fontSize:"1.25rem",fontWeight:700,background:C.white,color:C.navy,textDecoration:"none",boxSizing:"border-box"})}>
+        📄 정책제안서 초안 보기 ↗
+      </a>
+    </div>}
+    <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+      {table.lmUrl&&<BigBtn kind="mint" href={table.lmUrl}>🤖 AI 정책매니저 챗봇 ↗</BigBtn>}
+    </div>
+    <p style={{fontSize:"0.875rem",marginTop:"1rem",textAlign:"center",color:C.grayOnNavy}}>AI는 정답이 아닙니다. 깊은 토론을 돕습니다.</p>
+  </NavyPage>;
+}
+
+/* PMI 의견 제출 */
+function Opinion({config,table,onBack}){
+  const [name,setName]=useState("");const [plus,setPlus]=useState("");const [minus,setMinus]=useState("");const [interest,setInterest]=useState("");
+  const [state,setState]=useState("write");const [count,setCount]=useState(0);const [err,setErr]=useState("");
+  const reset=()=>{setName("");setPlus("");setMinus("");setInterest("");};
+  const submit=async()=>{
+    if(!plus.trim()&&!minus.trim()&&!interest.trim()){setErr("P / M / I 중 하나 이상 적어 주세요.");return;}
+    setErr("");setState("sending");
+    const parts=[];
+    if(name.trim())parts.push(`[작성자] ${name.trim()}`);
+    if(plus.trim())parts.push(`[P - 좋은 점] ${plus.trim()}`);
+    if(minus.trim())parts.push(`[M - 아쉬운 점] ${minus.trim()}`);
+    if(interest.trim())parts.push(`[I - 흥미로운 점] ${interest.trim()}`);
+    try{
+      await fadd("opinions",{tableId:table.id,tableName:table.name,text:parts.join("\n"),authorName:name.trim()||"익명",ts:Date.now()});
+      setCount(c=>c+1);reset();setState("done");
+    }catch{setErr("제출이 안 됐습니다. 다시 눌러 주세요.");setState("write");}
+  };
+  function PMIField({badge,badgeBg,labelColor,label,value,onChange,placeholder,bg}){
+    const taRef=useRef(null);
+    return <div style={{borderRadius:"1rem",padding:"1rem",background:C.white}}>
+      <div style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.5rem"}}>
+        <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:"2rem",height:"2rem",borderRadius:"50%",background:badgeBg,color:labelColor,fontWeight:900,fontSize:"1rem",flexShrink:0}}>{badge}</span>
+        <span style={{fontSize:"1rem",fontWeight:900,color:labelColor}}>{label}</span>
+      </div>
+      <p style={{fontSize:"0.875rem",lineHeight:1.6,color:C.gray,marginBottom:"0.625rem",paddingLeft:"2.5rem"}}>{placeholder}</p>
+      <textarea
+        ref={taRef}
+        value={value}
+        onChange={e=>onChange(e.target.value)}
+        rows={4}
+        onFocus={()=>{setTimeout(()=>{taRef.current&&taRef.current.scrollIntoView({behavior:"smooth",block:"center"});},300);}}
+        style={{width:"100%",border:"none",borderRadius:"0.75rem",padding:"1rem",fontSize:"1.125rem",lineHeight:1.7,fontFamily:"inherit",resize:"none",boxSizing:"border-box",background:bg}}
+      />
+    </div>;
+  }
+  return <NavyPage>
+    <BackBar onBack={onBack}/>
+    <Badge c="의견 제출"/>
+    <h2 style={{fontSize:"1.5rem",fontWeight:900,color:"#fff",marginTop:"1rem",marginBottom:"0.375rem",lineHeight:1.3}}>{table.name}</h2>
+    <p style={{fontSize:"0.8rem",color:C.grayOnNavy,marginBottom:"1.25rem",lineHeight:1.5}}>PMI 기법으로 이 정책을 다양하게 평가해 주세요.</p>
+    {state==="done"
+      ?<div style={{borderRadius:"1rem",padding:"2rem",textAlign:"center",background:C.white}}>
+        <div style={{fontSize:"3rem",marginBottom:"0.75rem"}}>✅</div>
+        <div style={{fontSize:"1.5rem",fontWeight:900,color:C.navy}}>의견이 잘 전달되었습니다</div>
+        <p style={{fontSize:"1.125rem",marginTop:"0.5rem",color:C.gray}}>지금까지 {count}건을 제출하셨습니다.</p>
+        <button onClick={()=>setState("write")} style={B({marginTop:"1.5rem",width:"100%",borderRadius:"1rem",padding:"1rem",fontSize:"1.25rem",fontWeight:700,background:C.mint,color:"#fff",border:"none",boxSizing:"border-box"})}>의견 더 쓰기</button>
+      </div>
+      :<div style={{display:"flex",flexDirection:"column",gap:"0.75rem"}}>
+        <div style={{borderRadius:"1rem",padding:"1rem",background:"rgba(255,255,255,0.12)"}}>
+          <label style={{fontSize:"0.875rem",fontWeight:900,display:"block",marginBottom:"0.5rem",color:"rgba(255,255,255,0.9)"}}>✏️ 작성자명</label>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="이름" style={{width:"100%",borderRadius:"0.75rem",padding:"0.75rem 1rem",fontSize:"1.125rem",background:"rgba(255,255,255,0.95)",color:C.navy,border:"none",fontFamily:"inherit",boxSizing:"border-box"}}/>
+        </div>
+        <PMIField badge="P" badgeBg="#DFF7ED" labelColor="#1A7A4A" label="Plus — 좋은 점" value={plus} onChange={setPlus} bg="#F2FBF6" placeholder="이 정책이 시행되면 우리 삶에 어떤 좋은 변화가 생길까요? 무엇이 마음에 드나요?"/>
+        <PMIField badge="M" badgeBg="#FDECEA" labelColor="#B33A2A" label="Minus — 아쉬운 점" value={minus} onChange={setMinus} bg="#FDF6F4" placeholder="반대로 어떤 부작용이나 걱정거리가 있을까요? 놓친 부분은 무엇일까요?"/>
+        <PMIField badge="I" badgeBg="#EDE7F6" labelColor="#5B3FD8" label="Interesting — 흥미로운 점·아이디어" value={interest} onChange={setInterest} bg="#F4F2FC" placeholder="좋다 나쁘다를 떠나서, '이렇게 바꾸면 재밌겠는데?', '이건 좀 독특하네?' 싶은 신선한 생각이나 제안이 있나요?"/>
+        {err&&<p style={{fontSize:"1rem",fontWeight:700,textAlign:"center",color:"#FFB199"}}>{err}</p>}
+        <BigBtn kind="mint" onClick={state==="sending"?undefined:submit}>{state==="sending"?"보내는 중…":"의견 보내기"}</BigBtn>
+      </div>}
+  </NavyPage>;
+}
+
+function Vote({onBack}){
+  return <NavyPage>
+    <BackBar onBack={onBack}/>
+    <Badge c="우선순위 투표"/>
+    <h2 style={{fontSize:"1.5rem",fontWeight:900,color:"#fff",marginTop:"1rem",marginBottom:"0.75rem",lineHeight:1.3}}>가장 중요한 정책에<br/>한 표를 주세요</h2>
+    <p style={{fontSize:"1.125rem",marginBottom:"0.75rem",lineHeight:1.6,color:C.grayOnNavy}}>아래 버튼을 누르면 투표 화면(마을e척척)으로 이동합니다. 1인 1표입니다.</p>
+    <p style={{fontSize:"0.875rem",marginBottom:"1.25rem",lineHeight:1.5,color:"rgba(255,255,255,0.6)",background:"rgba(255,255,255,0.08)",padding:"0.75rem 1rem",borderRadius:"0.75rem"}}>📱 마을e척척 앱이 설치된 경우 앱으로 자동 연결됩니다.<br/>앱이 없으면 브라우저에서 웹 버전으로 열립니다.</p>
+    <BigBtn kind="mint" href={DEFAULT_VOTE}>🗳️ 투표하러 가기</BigBtn>
+    <p style={{fontSize:"1rem",marginTop:"1.25rem",textAlign:"center",color:C.grayOnNavy}}>투표 결과는 행사장 큰 화면에서<br/>실시간으로 함께 보실 수 있습니다.</p>
+  </NavyPage>;
+}
+
+/* ━━━━━━━━━━━━━━━━ 운영진 ━━━━━━━━━━━━━━━━ */
+function StaffGate({config,onPass,onBack}){
+  const [code,setCode]=useState("");const [err,setErr]=useState("");
+  return <NavyPage>
+    <BackBar onBack={onBack}/>
+    <h2 style={{fontSize:"1.5rem",fontWeight:900,color:"#fff",marginBottom:"0.5rem"}}>운영진 입장</h2>
+    <p style={{fontSize:"1rem",marginBottom:"1.5rem",color:C.grayOnNavy}}>운영진 암호를 입력해 주세요.</p>
+    <input value={code} onChange={e=>{setCode(e.target.value);setErr("");}} type="password" inputMode="numeric" placeholder="암호 입력" style={{width:"100%",borderRadius:"1rem",padding:"1.25rem",fontSize:"1.5rem",textAlign:"center",fontWeight:700,border:"none",fontFamily:"inherit",boxSizing:"border-box",marginBottom:"1rem"}}/>
+    {err&&<p style={{fontSize:"1.125rem",marginBottom:"0.75rem",fontWeight:700,color:"#FFB199"}}>{err}</p>}
+    <BigBtn kind="mint" onClick={()=>code===(config?.staffCode||DEFAULT_CODE)?onPass():setErr("암호가 맞지 않습니다.")}>입장하기</BigBtn>
+  </NavyPage>;
+}
+function StaffMenu({go,onBack}){
+  return <NavyPage>
+    <BackBar onBack={onBack} label="← 참가자 화면으로"/>
+    <Badge c="운영진 메뉴"/>
+    <h2 style={{fontSize:"1.5rem",fontWeight:900,color:"#fff",marginTop:"1rem",marginBottom:"1.5rem"}}>무엇을 하시겠어요?</h2>
+    <div style={{display:"flex",flexDirection:"column",gap:"1rem"}}>
+      <BigBtn onClick={()=>go("scribe")}>✍️ 테이블 퍼실 · 서기</BigBtn>
+      <BigBtn onClick={()=>go("dashboard")}>📊 운영 대시보드</BigBtn>
+      <BigBtn kind="outline" onClick={()=>go("setup")}>⚙️ 행사 설정</BigBtn>
+    </div>
+  </NavyPage>;
+}
+
+function Setup({config,onDone,onBack}){
+  const [title,setTitle]=useState(config?.title||DEFAULT_TITLE);
+  const [session,setSession]=useState(config?.session||DEFAULT_SESSION);
+  const [code,setCode]=useState(config?.staffCode||DEFAULT_CODE);
+  const [tablesText,setTablesText]=useState(config?.tables?.map(t=>[t.name,t.lmUrl,t.pdfId].filter(Boolean).join("|")).join("\n")||DEFAULT_TABLES.join("\n"));
+  const [voteUrl,setVoteUrl]=useState(config?.voteUrl||DEFAULT_VOTE);
+  const [gasUrl,setGasUrl]=useState(config?.gasUrl||DEFAULT_GAS_URL);
+  const [saving,setSaving]=useState(false);const [err,setErr]=useState("");
+  const save=async()=>{
+    const tables=tablesText.split("\n").map((l,i)=>{
+      const parts=l.trim().split("|").map(s=>(s||"").trim());
+      const prev=config?.tables?.find(t=>t.name===parts[0]);
+      return{id:prev?.id||`t${i+1}-${Math.random().toString(36).slice(2,5)}`,name:parts[0]||"",lmUrl:parts[1]||"",pdfId:parts[2]||""};
+    }).filter(t=>t.name);
+    if(!title.trim()||!tables.length){setErr("행사명과 정책 테이블을 입력해 주세요.");return;}
+    setSaving(true);
+    try{
+      await fset("config","main",{title:title.trim(),session:session.trim(),tables,voteUrl:voteUrl.trim(),staffCode:code.trim()||DEFAULT_CODE,gasUrl:gasUrl.trim()});
+      onDone();
+    }catch{setErr("저장에 실패했습니다.");}
+    setSaving(false);
+  };
+  const fs={width:"100%",borderRadius:"0.5rem",padding:"0.75rem",marginBottom:"1rem",fontFamily:"inherit",fontSize:"0.875rem",boxSizing:"border-box",...inp,background:"#fff"};
+  return <div style={{minHeight:"100vh",background:C.paper}}>
+    <div style={{maxWidth:"28rem",margin:"0 auto",padding:"2.5rem 1.5rem"}}>
+      <div style={{fontSize:"0.75rem",letterSpacing:"0.1em",fontWeight:700,marginBottom:"0.25rem",color:C.mint}}>운영자 설정</div>
+      <h2 style={{fontSize:"1.5rem",fontWeight:900,marginBottom:"1.5rem",color:C.navy}}>행사 정보</h2>
+      {[["행사명","textarea",title,setTitle],["세션명","input",session,setSession],["운영진 암호","input",code,setCode]].map(([label,type,val,setVal])=><div key={label}>
+        <label style={{fontSize:"0.875rem",fontWeight:700,display:"block",marginBottom:"0.25rem",color:C.ink}}>{label}</label>
+        {type==="textarea"?<textarea value={val} onChange={e=>setVal(e.target.value)} rows={2} style={fs}/>:<input value={val} onChange={e=>setVal(e.target.value)} style={fs}/>}
+      </div>)}
+      <label style={{fontSize:"0.875rem",fontWeight:700,display:"block",marginBottom:"0.25rem",color:C.ink}}>정책 테이블 — 이름 | NotebookLM링크 | PDF파일ID</label>
+      <textarea value={tablesText} onChange={e=>setTablesText(e.target.value)} rows={14} style={{...fs,fontSize:"0.7rem"}}/>
+      <label style={{fontSize:"0.875rem",fontWeight:700,display:"block",marginBottom:"0.25rem",color:C.ink}}>투표 링크 (마을e척척)</label>
+      <input value={voteUrl} onChange={e=>setVoteUrl(e.target.value)} style={fs}/>
+      <label style={{fontSize:"0.875rem",fontWeight:700,display:"block",marginBottom:"0.25rem",color:C.ink}}>📸 GAS Web App URL</label>
+      <input value={gasUrl} onChange={e=>setGasUrl(e.target.value)}
+        placeholder="https://script.google.com/macros/s/AKfycbw56wJTjInXRBjXaVcsXh1SY1oSArcz4A1Po7dZC2raMUCRNWRU1vcjp48hOQkEzC8K/exec"
+        style={{...fs,fontSize:"0.65rem"}}/>
+      <p style={{fontSize:"0.75rem",marginBottom:"0.5rem",color:"#2E7E70",fontWeight:700}}>
+        ✅ 현재 GAS URL: AKfycbzsz6QD7I...G5FmuQ/exec (기본 적용됨)
+      </p>
+      {err&&<p style={{fontSize:"0.875rem",marginBottom:"0.75rem",fontWeight:700,color:"#D9534F"}}>{err}</p>}
+      <div style={{display:"flex",gap:"0.5rem"}}><Btn onClick={save} disabled={saving}>{saving?"저장 중…":"저장하기"}</Btn><Btn kind="ghost" onClick={onBack}>뒤로</Btn></div>
+    </div>
+  </div>;
+}
+
+function Scribe({config,onBack}){
+  const [tableId,setTableId]=useState("");const [deck,setDeck]=useState(null);const [photos,setPhotos]=useState([]);const [busy,setBusy]=useState(false);const [msg,setMsg]=useState("");
+  const fileRef=useRef(null);const table=config.tables.find(t=>t.id===tableId);const gasUrl=config.gasUrl||DEFAULT_GAS_URL;
+  useEffect(()=>{
+    if(!tableId)return;setMsg("");
+    fget("tables",tableId).then(d=>{setDeck(d?{...EMPTY_DECK,...d}:{...EMPTY_DECK});if(Array.isArray(d?.photoItems))setPhotos(d.photoItems);else setPhotos([]);}).catch(()=>{setDeck({...EMPTY_DECK});setPhotos([]);});
+  },[tableId]);
+  const savePhotos=async(items)=>{await fset("tables",tableId,{photoItems:items,photoAt:Date.now()});};
+  const onPhoto=async e=>{
+    const files=Array.from(e.target.files||[]);if(!files.length)return;
+    if(photos.length+files.length>5){setMsg("최대 5장까지 업로드할 수 있습니다.");e.target.value="";return;}
+    setBusy(true);
+    if(gasUrl){
+      const results=[];
+      for(let i=0;i<files.length;i++){
+        setMsg(`📤 ${i+1}/${files.length}장 드라이브 업로드 중…`);
+        try{const compressed=await compressImage(files[i],1200,0.75);const result=await uploadPhotoToDrive({base64full:compressed,tableId,tableName:table.name,gasUrl});results.push({url:result.thumbnailUrl||result.directUrl,fileId:result.fileId,isDrive:true});}
+        catch(err){setMsg(`⚠️ 업로드 실패: ${err.message}`);setBusy(false);e.target.value="";return;}
+      }
+      const newPhotos=[...photos,...results];await savePhotos(newPhotos);setPhotos(newPhotos);setDeck(d=>({...d,photoAt:Date.now()}));
+      setMsg(`✅ ${files.length}장이 구글 드라이브에 저장되었습니다.`);
+    }else{
+      setMsg("압축 중…");
+      try{
+        const compressed=await Promise.all(files.map(f=>compressImage(f,1000,0.65)));
+        const newItems=[...photos,...compressed.map(url=>({url,fileId:null,isDrive:false}))];
+        if(newItems.reduce((s,p)=>s+p.url.length,0)>3500000){setMsg("⚠️ 용량 초과. GAS URL을 설정하거나 장수를 줄여 주세요.");setBusy(false);e.target.value="";return;}
+        await savePhotos(newItems);setPhotos(newItems);setDeck(d=>({...d,photoAt:Date.now()}));
+        setMsg(`✅ ${files.length}장 업로드 완료.`);
+      }catch(err){setMsg(`⚠️ 업로드 실패: ${err.message}`);}
+    }
+    setBusy(false);e.target.value="";
+  };
+  const deletePhoto=async idx=>{const next=photos.filter((_,i)=>i!==idx);await savePhotos(next);setPhotos(next);};
+  const save=async()=>{
+    setBusy(true);setMsg("");
+    try{await fset("tables",tableId,{...deck,updatedAt:Date.now()});setMsg("✅ 저장되었습니다.");}
+    catch{setMsg("⚠️ 저장 실패.");}
+    setBusy(false);
+  };
+  const handleChange=(k,v)=>setDeck(d=>({...d,[k]:v}));
+  const card={borderRadius:"0.75rem",padding:"1rem",background:"#fff",border:`1.5px solid ${C.line}`,marginBottom:"1rem"};
+  const ta={width:"100%",borderRadius:"0.5rem",padding:"0.75rem",fontSize:"0.875rem",fontFamily:"inherit",border:`1.5px solid ${C.line}`,boxSizing:"border-box",resize:"none"};
+  return <div style={{minHeight:"100vh",background:C.paper}}>
+    <div style={{maxWidth:"42rem",margin:"0 auto",padding:"2rem 1.25rem"}}>
+      <div style={{fontSize:"0.75rem",letterSpacing:"0.1em",fontWeight:700,marginBottom:"0.25rem",color:C.mint}}>테이블 퍼실 · 서기</div>
+      <h2 style={{fontSize:"1.5rem",fontWeight:900,marginBottom:"0.25rem",color:C.navy}}>최종 숙의 → 발표 슬라이드 5장</h2>
+      <p style={{fontSize:"0.75rem",fontWeight:700,marginBottom:"1rem",color:gasUrl?"#2E7E70":"#C77B2C"}}>{gasUrl?"✅ 구글 드라이브 연결됨":"⚠️ GAS URL 미설정"}</p>
+      <p style={{fontSize:"0.875rem",fontWeight:700,marginBottom:"0.5rem",color:C.ink}}>정책 테이블 선택</p>
+      <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem",marginBottom:"1.25rem"}}>
+        {config.tables.map(t=><button key={t.id} onClick={()=>setTableId(t.id)} style={B({fontSize:"0.75rem",padding:"0.375rem 0.75rem",borderRadius:"9999px",fontWeight:700,background:tableId===t.id?C.navy:"#fff",color:tableId===t.id?"#fff":C.navy,border:`1.5px solid ${tableId===t.id?C.navy:C.line}`})}>{t.name}</button>)}
+      </div>
+      {table&&deck&&<div>
+        <div style={card}><div style={{fontSize:"0.875rem",fontWeight:900,marginBottom:"0.5rem",color:C.navy}}>테이블 소개</div><textarea value={deck.intro||""} onChange={e=>handleChange("intro",e.target.value)} rows={3} placeholder="이 정책은 ~한 문제에서 출발했습니다." style={ta}/></div>
+        <div style={card}>
+          <div style={{fontSize:"0.875rem",fontWeight:900,marginBottom:"0.5rem",color:C.navy}}>① 정리판 사진 (최대 5장){gasUrl&&<span style={{marginLeft:"0.5rem",fontSize:"0.75rem",fontWeight:400,color:"#2E7E70"}}>→ 구글 드라이브 저장</span>}</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:"0.5rem",marginBottom:"0.75rem"}}>
+            {photos.map((photo,i)=><div key={i} style={{position:"relative",borderRadius:"0.75rem",overflow:"hidden",aspectRatio:"1"}}>
+              <img src={photo.url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+              <button onClick={()=>deletePhoto(i)} style={B({position:"absolute",top:"0.25rem",right:"0.25rem",width:"1.25rem",height:"1.25rem",borderRadius:"50%",background:"rgba(220,0,0,.85)",color:"#fff",border:"none",fontSize:"0.75rem",fontWeight:900,display:"flex",alignItems:"center",justifyContent:"center",padding:0})}>×</button>
+              {i===0&&<div style={{position:"absolute",bottom:0,left:0,right:0,textAlign:"center",padding:"0.125rem",fontSize:"9px",fontWeight:700,color:"#fff",background:"rgba(0,0,0,.5)"}}>주사진</div>}
+              {photo.isDrive&&<div style={{position:"absolute",top:"0.25rem",left:"0.25rem",borderRadius:"0.25rem",padding:"0 0.25rem",fontSize:"8px",fontWeight:700,color:"#fff",background:"rgba(66,133,244,.85)"}}>Drive</div>}
+            </div>)}
+            {photos.length<5&&<button onClick={()=>fileRef.current?.click()} disabled={busy} style={B({aspectRatio:"1",borderRadius:"0.75rem",border:`2px dashed ${C.mint}`,color:C.mint,background:C.mintSoft,fontSize:"1.5rem",display:"flex",alignItems:"center",justifyContent:"center"})}>+</button>}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" multiple onChange={onPhoto} style={{display:"none"}}/>
+        </div>
+        <div style={card}><div style={{fontSize:"0.875rem",fontWeight:900,marginBottom:"0.5rem",color:C.navy}}>② Tiro 회의록</div><input value={deck.tiroLink||""} onChange={e=>handleChange("tiroLink",e.target.value)} placeholder="Tiro 링크" style={{...ta,marginBottom:"0.5rem",resize:undefined}}/><textarea value={deck.tiroSummary||""} onChange={e=>handleChange("tiroSummary",e.target.value)} rows={4} placeholder="Tiro 요약본 붙여넣기" style={ta}/></div>
+        <div style={{borderRadius:"0.75rem",padding:"1rem",marginBottom:"1rem",background:C.mintSoft,border:`1.5px solid ${C.mint}`}}>
+          <div style={{fontSize:"0.875rem",fontWeight:900,marginBottom:"0.25rem",color:C.navy}}>③ AI 발표 텍스트 자동 생성</div>
+          <p style={{fontSize:"0.75rem",marginBottom:"0.75rem",color:C.gray}}>사진 + 의견 + Tiro 요약으로 5장 초안을 작성합니다.</p>
+          <Btn small disabled={!photos.length} onClick={()=>{}}>🤖 AI 발표 텍스트 생성</Btn>
+        </div>
+        {msg&&<p style={{fontSize:"0.875rem",fontWeight:700,marginBottom:"1rem",color:msg.includes("⚠")?"#D9534F":"#2E7E70"}}>{msg}</p>}
+        <div style={{display:"flex",gap:"0.5rem"}}><Btn onClick={save} disabled={busy}>{busy?"저장 중…":"💾 저장하기"}</Btn><Btn kind="ghost" onClick={onBack}>운영진 메뉴</Btn></div>
+      </div>}
+      {!table&&<button onClick={onBack} style={B({fontSize:"0.875rem",textDecoration:"underline",color:C.gray,background:"none",border:"none"})}>운영진 메뉴로</button>}
+    </div>
+  </div>;
+}
+
+/* ━━━━━━━━━━━━━━━━ 대시보드 (실시간 Firestore) ━━━━━━━━━━━━━━━━ */
+function Dashboard({config,onBack}){
+  const [opinions,setOpinions]=useState([]);
+  const [votes,setVotes]=useState({});
+  const [showTimer,setShowTimer]=useState(false);
+  const [voteEdit,setVoteEdit]=useState(false);
+  const [voteDraft,setVoteDraft]=useState({});
+  const [loading,setLoading]=useState(true);
+
+  // 실시간 의견 구독
+  useEffect(()=>{
+    const unsub=flisten("opinions",data=>{setOpinions(data.sort((a,b)=>(b.ts||0)-(a.ts||0)));setLoading(false);});
+    return unsub;
+  },[]);
+
+  // 투표 실시간 구독
+  useEffect(()=>{
+    const unsub=flistenDoc("config","votes",data=>{setVotes(data?.counts||{});});
+    return unsub;
+  },[]);
+
+  const saveVotes=async()=>{
+    const counts={};Object.entries(voteDraft).forEach(([k,v])=>{counts[k]=Number(v)||0;});
+    try{await fset("config","votes",{counts});setVoteEdit(false);}catch{}
+  };
+
+  const byTable=useMemo(()=>{const m={};config.tables.forEach(t=>(m[t.name]=0));opinions.forEach(o=>{m[o.tableName]=(m[o.tableName]||0)+1;});return m;},[opinions,config.tables]);
+  const maxTable=Math.max(1,...Object.values(byTable));
+  const totalVotes=Object.values(votes).reduce((a,b)=>a+b,0);
+  const maxVote=Math.max(1,...Object.values(votes));
+
+  return <div style={{minHeight:"100vh",background:C.paper}}>
+    {showTimer&&<Timer onClose={()=>setShowTimer(false)}/>}
+    <div style={{maxWidth:"64rem",margin:"0 auto",padding:"2rem 1.25rem"}}>
+      <div style={{display:"flex",flexWrap:"wrap",alignItems:"flex-start",justifyContent:"space-between",gap:"0.75rem",marginBottom:"1.5rem"}}>
+        <div><div style={{fontSize:"0.75rem",letterSpacing:"0.1em",fontWeight:700,marginBottom:"0.25rem",color:C.mint}}>운영 대시보드 · 실시간</div><h2 style={{fontSize:"1.25rem",fontWeight:900,color:C.navy}}>전남광주 통합특별시 시민주권 정책공론장</h2></div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:"0.5rem"}}>
+          <button onClick={()=>setShowTimer(true)} style={B({padding:"0.375rem 0.75rem",borderRadius:"0.5rem",fontSize:"0.875rem",fontWeight:700,background:C.navyDeep,color:"#fff",border:"none"})}>⏱ 타이머</button>
+          <Btn small kind="ghost" onClick={onBack}>메뉴</Btn>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:"1rem",marginBottom:"1.25rem"}}>
+        <div style={{borderRadius:"0.75rem",padding:"1.25rem",background:C.navy}}>
+          <div style={{fontSize:"0.75rem",letterSpacing:"0.1em",fontWeight:700,color:C.mint}}>전체 의견</div>
+          <div style={{fontSize:"3rem",fontWeight:900,color:"#fff",marginTop:"0.25rem"}}>{opinions.length}</div>
+          <div style={{fontSize:"0.75rem",marginTop:"0.5rem",color:C.grayOnNavy}}>투표 {totalVotes}표 · 실시간 동기화 중</div>
+        </div>
+        <div style={{borderRadius:"0.75rem",padding:"1.25rem",background:"#fff",border:`1.5px solid ${C.line}`}}>
+          <div style={{fontSize:"0.875rem",fontWeight:900,marginBottom:"0.75rem",color:C.navy}}>테이블별 의견 수</div>
+          {config.tables.map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.375rem"}}>
+            <span style={{fontSize:"0.75rem",width:"7rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:C.ink}}>{t.name}</span>
+            <div style={{flex:1,borderRadius:"9999px",height:"0.75rem",background:C.mintSoft}}><div style={{height:"0.75rem",borderRadius:"9999px",background:C.mint,width:`${(byTable[t.name]/maxTable)*100}%`,minWidth:byTable[t.name]?"0.5rem":0}}/></div>
+            <span style={{fontSize:"0.75rem",fontWeight:900,color:"#2E7E70",minWidth:"1.25rem",textAlign:"right"}}>{byTable[t.name]}</span>
+          </div>)}
+        </div>
+        <div style={{borderRadius:"0.75rem",padding:"1.25rem",background:"#fff",border:`1.5px solid ${C.line}`}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"0.75rem"}}>
+            <div style={{fontSize:"0.875rem",fontWeight:900,color:C.navy}}>우선순위 투표</div>
+            {!voteEdit?<button onClick={()=>{setVoteDraft({...votes});setVoteEdit(true);}} style={B({fontSize:"0.75rem",textDecoration:"underline",fontWeight:700,color:C.mint,background:"none",border:"none"})}>결과 입력</button>
+              :<span style={{display:"flex",gap:"0.5rem"}}><button onClick={saveVotes} style={B({fontSize:"0.75rem",fontWeight:900,color:"#2E7E70",background:"none",border:"none"})}>저장</button><button onClick={()=>setVoteEdit(false)} style={B({fontSize:"0.75rem",color:C.gray,background:"none",border:"none"})}>취소</button></span>}
+          </div>
+          {config.tables.map(t=><div key={t.id} style={{display:"flex",alignItems:"center",gap:"0.5rem",marginBottom:"0.375rem"}}>
+            <span style={{fontSize:"0.75rem",width:"7rem",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",color:C.ink}}>{t.name}</span>
+            {voteEdit?<input type="number" min="0" value={voteDraft[t.id]??""} placeholder="0" onChange={e=>setVoteDraft(d=>({...d,[t.id]:Math.max(0,parseInt(e.target.value,10)||0)}))} style={{width:"4rem",borderRadius:"0.25rem",padding:"0.25rem 0.375rem",textAlign:"right",fontSize:"0.875rem",fontFamily:"inherit",...inp}}/>
+              :<><div style={{flex:1,borderRadius:"9999px",height:"0.75rem",background:"#FFF1E3"}}><div style={{height:"0.75rem",borderRadius:"9999px",background:"#E89A4F",width:`${((votes[t.id]||0)/maxVote)*100}%`,minWidth:votes[t.id]?"0.5rem":0}}/></div><span style={{fontSize:"0.75rem",fontWeight:900,color:"#C77B2C",minWidth:"1.25rem",textAlign:"right"}}>{votes[t.id]||0}</span></>}
+          </div>)}
+        </div>
+      </div>
+      <div style={{borderRadius:"0.75rem",padding:"1.25rem",background:"#fff",border:`1.5px solid ${C.line}`}}>
+        <div style={{fontSize:"0.875rem",fontWeight:900,marginBottom:"0.75rem",color:C.navy}}>실시간 의견 피드 {loading&&"· 로딩 중"}</div>
+        <div style={{display:"flex",flexDirection:"column",gap:"0.5rem",maxHeight:"24rem",overflowY:"auto"}}>
+          {opinions.slice(0,50).map(o=><div key={o.id} style={{borderRadius:"0.5rem",padding:"0.75rem",background:C.paper,border:`1px solid ${C.line}`}}>
+            <div style={{fontSize:"0.75rem",marginBottom:"0.25rem",color:C.gray}}>{o.tableName} · {o.authorName||"익명"} · {o.ts?new Date(o.ts).toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"}):""}</div>
+            <div style={{fontSize:"0.875rem",color:C.ink,whiteSpace:"pre-wrap"}}>{o.text}</div>
+          </div>)}
+          {!loading&&opinions.length===0&&<p style={{fontSize:"0.875rem",color:C.gray}}>아직 들어온 의견이 없습니다.</p>}
+        </div>
+      </div>
+    </div>
+  </div>;
+}
+
+/* ━━━━━━━━━━━━━━━━ 앱 루트 ━━━━━━━━━━━━━━━━ */
+function ForumApp(){
+  const [mode,setMode]=useState("landing");
+  const [config,setConfig]=useState(null);
+  const [ready,setReady]=useState(false);
+  const [myTable,setMyTable]=useState(null);
+  const [staffOk,setStaffOk]=useState(false);
+
+  const loadConfig=useCallback(async()=>{
+    const d=await fget("config","main");
+    if(d){
+      // tables 배열이 없으면 기본값
+      if(!d.tables||!d.tables.length){
+        d.tables=DEFAULT_TABLES.map((l,i)=>{const parts=l.split("|");return{id:`d${i+1}`,name:(parts[0]||"").trim(),lmUrl:(parts[1]||"").trim(),pdfId:(parts[2]||"").trim()};});
+      }
+      setConfig(d);
+    }
+    setReady(true);
+  },[]);
+
+  useEffect(()=>{
+    // Firebase 준비 대기
+    const run=()=>loadConfig();
+    if(window._fbReady)run();
+    else window._appStart=run;
+  },[loadConfig]);
+
+  const goLanding=()=>{loadConfig();setMode("landing");};
+  const cfg=config||{
+    title:DEFAULT_TITLE,session:DEFAULT_SESSION,voteUrl:DEFAULT_VOTE,staffCode:DEFAULT_CODE,gasUrl:DEFAULT_GAS_URL,
+    tables:DEFAULT_TABLES.map((l,i)=>{const parts=l.split("|");return{id:`d${i+1}`,name:(parts[0]||"").trim(),lmUrl:(parts[1]||"").trim(),pdfId:(parts[2]||"").trim()};})
+  };
+  const pickThen=next=>{if(myTable){setMode(next);}else{setMode(`pick-${next}`);}};
+
+  if(!ready)return(
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:C.navy}}>
+      <div style={{fontSize:"2rem",marginBottom:"1rem"}}>🔄</div>
+      <p style={{fontSize:"1.125rem",color:C.grayOnNavy,fontFamily:"Noto Sans KR,sans-serif"}}>불러오는 중…</p>
+    </div>
+  );
+
+  return <div>
+    {mode==="landing"&&<Landing config={cfg} onStaff={()=>setMode(staffOk?"staffmenu":"staffgate")} go={next=>next==="vote"?setMode("vote"):pickThen(next)}/>}
+    {(mode==="pick-learn"||mode==="pick-opinion")&&<TablePick config={cfg} title="내 정책 테이블을 골라 주세요" sub="앉아 계신 테이블 이름을 눌러 주세요" onPick={t=>{setMyTable(t);setMode(mode.replace("pick-",""));}} onBack={goLanding}/>}
+    {mode==="learn"&&myTable&&<Learn config={cfg} table={myTable} onBack={goLanding}/>}
+    {mode==="opinion"&&myTable&&<Opinion config={cfg} table={myTable} onBack={goLanding}/>}
+    {mode==="vote"&&<Vote onBack={goLanding}/>}
+    {mode==="staffgate"&&<StaffGate config={cfg} onPass={()=>{setStaffOk(true);setMode("staffmenu");}} onBack={goLanding}/>}
+    {mode==="staffmenu"&&<StaffMenu go={setMode} onBack={goLanding}/>}
+    {mode==="setup"&&<Setup config={config} onDone={()=>{loadConfig();setMode("staffmenu");}} onBack={()=>setMode("staffmenu")}/>}
+    {mode==="scribe"&&<Scribe config={cfg} onBack={()=>setMode("staffmenu")}/>}
+    {mode==="dashboard"&&<Dashboard config={cfg} onBack={()=>setMode("staffmenu")}/>}
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<ForumApp/>);
+</script>
+</body>
+</html>
